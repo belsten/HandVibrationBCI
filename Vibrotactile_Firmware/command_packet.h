@@ -22,8 +22,8 @@ typedef struct
 
 // packet that configures relevent parameters of stimulation, is immediatly sent after a "Configure" command packet
 typedef struct {
-  uint8_t Amplitude;
-  float   Frequency;
+  uint8_t Amplitude;        // unknown
+  float   Frequency;        // in Hz
 } StimulationConfiguration;
 
 #pragma pack()

@@ -9,13 +9,28 @@
 #define LATCH      10
 #define oe         -1  // set to -1 to not use the enable pin (its optional)
 
-Adafruit_TLC5947 tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
-CommandPacket pkt;
+Adafruit_TLC5947                tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
+CommandPacket               cmd_pkt;
+StimulationConfiguration config_pkt;
 
 // ========== Functions ==========
+
+/*
+ * Function to get the command type sent from the PC 
+ */
 void GetCommand() {
-  Serial.readBytes((char*)&pkt, sizeof(CommandPacket));
+  Serial.readBytes((char*)&cmd_pkt, sizeof(CommandPacket));
 }
+
+
+/*
+ * Function to get the stimulation configuration from the PC. This function should
+ * always be called after a "BlinkLED" or "Configure" command packet is received. 
+ */
+void GetConfiguration() {
+  Serial.readBytes((char*)&config_pkt, sizeof(StimulationConfiguration));
+}
+
 
 /*
  * Blink the internal LED. Useful function for debugging and demonstrating basic usage.  
@@ -27,11 +42,12 @@ void ExecuteBlinkLED() {
   for (int i = 0; i < n_blinks; i++)
   {
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
-    delay(ms_on_and_off0);             // wait 
+    delay(ms_on_and_off);             // wait 
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off 
     delay(ms_on_and_off);              // wait 
   }
 }
+
 
 // ========== setup ==========
 void setup() {
@@ -51,13 +67,19 @@ void loop() {
     GetCommand();
 
     // decide what to do with the new command
-    switch (pkt.Command) {
+    switch (cmd_pkt.Command) {
       case BlinkLED:
-        // Blink the internal LED
+      
+        // get the stim configuration
+        GetConfiguration();
         ExecuteBlinkLED();
+      
         break;
      case Configure:
-        ParseConfiguration
+      
+        // get the stim configuration
+        GetConfiguration();
+        
         break;
      case Start:
         Serial.print("Start");
@@ -71,6 +93,6 @@ void loop() {
     
     // say what you got:
     Serial.print("I received: ");
-    Serial.println(pkt.Command , DEC);
+    Serial.println(cmd_pkt.Command , DEC);
   }
 }
