@@ -9,9 +9,12 @@
 #define LATCH      10
 #define oe         -1  // set to -1 to not use the enable pin (its optional)
 
+// ========== Global structures ==========
 Adafruit_TLC5947                tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
 CommandPacket               cmd_pkt;
 StimulationConfiguration config_pkt;
+
+bool stimulation_toggle = false;
 
 // ========== Functions ==========
 
@@ -49,12 +52,56 @@ void ExecuteBlinkLED() {
 }
 
 
+/*
+ * Turn on and off the LED with each iterrupt
+ */
+ISR(TIMER1_COMPA_vect) {  
+  if (stimulation_toggle){
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
+  }
+  else{
+    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off
+  }
+   stimulation_toggle = !stimulation_toggle;
+}
+
+
+/*
+ * Configure timer1 for interrupts
+ */
+void ConfigureTimer1() {
+  cli();  //stop interrupts
+  int prescaler   = 256;
+  float frequency = 1;
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0;           // set entire TCCR1A register to 0
+  TCCR1B = 0;           // same for TCCR1B
+  TCNT1  = 0;           // initialize counter value to 0
+  
+  // set compare match register
+  OCR1A = (16*10^6) / (frequency*prescaler) - 1; // (must be <65536)
+  
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  
+  // Set CS10 and CS12 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+
+  sei();//allow interrupts  
+}
+
+
 // ========== setup ==========
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
   while (!Serial);
+  ConfigureTimer1();
+  
 }
 
 // ========== loop ==========
