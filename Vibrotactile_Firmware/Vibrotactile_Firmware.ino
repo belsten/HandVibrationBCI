@@ -114,7 +114,7 @@ void ExecuteBlinkLED(int n_blinks=10) {
  */
 ISR(TIMER1_COMPA_vect) {  
   if (flag_stimulation) {
-    if (true/*test_LED*/) {
+    if (flag_test_LED) {
       if (stimulation_toggle) {
         digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
       }
