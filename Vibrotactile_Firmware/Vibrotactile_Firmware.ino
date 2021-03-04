@@ -28,11 +28,6 @@ bool stimulation_toggle = true;
  * Function to get the command type sent from the PC 
  */
 void GetCommand() {
-  if (Serial.available() != sizeof(CommandPacket))
-  {
-    Serial.readString();
-    Serial.println("Sent bytes does not match packet size");
-  }
   Serial.readBytes((char*)&cmd_pkt, sizeof(CommandPacket));
 }
 
@@ -42,6 +37,7 @@ void GetCommand() {
  * always be called after a "BlinkLED" or "Configure" command packet is received. 
  */
 void GetConfiguration() {
+  
   int count = 0;
   while (Serial.available() == 0) {
     count++;
@@ -51,6 +47,7 @@ void GetConfiguration() {
       return;
     }
   }
+  
   Serial.readBytes((char*)&config_pkt, sizeof(StimulationConfiguration));
 }
 
@@ -73,14 +70,13 @@ void StopStimulation() {
   if (flag_test_LED) {
      // turn off LED
      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off
+     // set LED flag off
+     flag_test_LED  = false; 
   }
   else {
     // set PWM to zero across all channels
-    
+     
   }
-  
-  // set LED flag off
-  flag_test_LED  = false; 
 
   // set the toggle such that in the next trial the stimulation is triggered first
   stimulation_toggle = true;
@@ -144,8 +140,8 @@ void ConfigureTimer1() {
   TCNT1  = 0;           // initialize counter value to 0
   
   // set compare match register
-  float freq = 4;
-  OCR1A = (uint16_t)((16/freq)*((float)1000000/(float)prescaler)) - 1;
+  // Clock frequency is 16x10^6 Hz
+  OCR1A = (uint16_t)((16/config_pkt.Frequency)*((float)1000000/(float)prescaler)) - 1;
   
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
