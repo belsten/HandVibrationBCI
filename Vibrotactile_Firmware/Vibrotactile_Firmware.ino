@@ -9,18 +9,17 @@
 #define LATCH      10
 #define oe         -1  // set to -1 to not use the enable pin (its optional)
 
-#define N_CHANNELS 48
+#define N_MOTORS 48
+#define CLOCK_RATE 16000000.0
 
 // ========== Global structures ==========
 Adafruit_TLC5947                tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
 CommandPacket               cmd_pkt;
-StimulationConfiguration config_pkt = {
-                                         0,    // Amplitude
-                                         5.0,  // Frequency  
-                                      };
-bool flag_test_LED      = false;
-bool flag_stimulation   = false;
-bool stimulation_toggle = true;
+StimulationConfiguration config_pkt;
+                                 
+bool flag_test_LED      = false;    // This flag is set high if the BlinkLED command is received
+bool flag_stimulation   = false;    // This flag is set according to the Start and Stop commands
+bool stimulation_toggle = true;     // This flag toggles stimulation on and off during stimulation
 
 // ========== Functions ==========
 
@@ -31,31 +30,31 @@ void GetCommand() {
   Serial.readBytes((char*)&cmd_pkt, sizeof(CommandPacket));
 }
 
-
 /*
  * Function to get the stimulation configuration from the PC. This function should
  * always be called after a "BlinkLED" or "Configure" command packet is received. 
  */
 void GetConfiguration() {
-  
+  /*
   int count = 0;
   while (Serial.available() == 0) {
     count++;
-    if (count > 1000)
-    {
-
+    if (count > 1000) {
       return;
     }
   }
+  */
   
   Serial.readBytes((char*)&config_pkt, sizeof(StimulationConfiguration));
+  if (config_pkt.Amplitude > 100) config_pkt.Amplitude =  100;
+  if (config_pkt.Amplitude <   0) config_pkt.Amplitude =    0;
+  if (config_pkt.Frequency <=  0) config_pkt.Frequency =    1;
 }
 
 /*
  * Handle all necessary procedures to start the stimulation 
  */
 void StartStimulation() {
-  // enable interrupts
   flag_stimulation = true;
 }
 
@@ -63,9 +62,13 @@ void StartStimulation() {
  * Handle all necessary procedures to stop the stimulation 
  */
 void StopStimulation() {
-  // disable interrupts
+  noInterrupts();
   flag_stimulation = false;
-  
+
+  TurnOffVibration();
+  digitalWrite(LED_BUILTIN, LOW);
+  interrupts();
+  /*
   // turn off stimulation
   if (flag_test_LED) {
      // turn off LED
@@ -74,23 +77,44 @@ void StopStimulation() {
      flag_test_LED  = false; 
   }
   else {
-    // set PWM to zero across all channels
-     
+     // set PWM to zero across all channels
+     TurnOffVibration();
   }
+  */
+
 
   // set the toggle such that in the next trial the stimulation is triggered first
   stimulation_toggle = true;
 }
 
+/* 
+ *  Turn on vibration for all motors
+ */
+void TurnOnVibration() {
+  for (int ch = 0; ch < N_MOTORS; ch++) {
+
+    // The PWM value in the API is [0-4095]
+    // Scale amplitude (which is a uint8_t in [0-100]) to a value in this range
+    uint16_t scaled_amplitude = (uint16_t)((float)4095/100)*(float)config_pkt.Amplitude;
+    
+    tlc.setPWM(ch, scaled_amplitude);
+    tlc.write(); 
+  }
+}
+
+
+/* 
+ *  Turn off vibration for all motors
+ */
 void TurnOffVibration() {
-  for (int ch = 0; ch < N_CHANNELS; ch++) {
+  for (int ch = 0; ch < N_MOTORS; ch++) {
     tlc.setPWM(ch, 0);
     tlc.write(); 
   }
 }
 
 /*
- * Blink the internal LED. Useful function for debugging and demonstrating basic usage.  
+ * Blink the internal LED. Useful function for debugging and demonstrating basic usage. 
 */
 void ExecuteBlinkLED(int n_blinks=10) {
   int ms_on_and_off = 100;
@@ -106,28 +130,37 @@ void ExecuteBlinkLED(int n_blinks=10) {
  
 
 /*
- * Turn on and off the LED with each iterrupt
+ * Turn on and off the stimulation with each interrupt
  */
 ISR(TIMER1_COMPA_vect) {  
   if (flag_stimulation) {
-    if (flag_test_LED) {
-      if (stimulation_toggle) {
-        digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
-      }
-      else{
-        digitalWrite(LED_BUILTIN, LOW);   // turn the LED off
-      }  
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
+    if (stimulation_toggle) {
+      //if (flag_test_LED) 
+        
+      //else                             
+        TurnOnVibration();                 // turn on vibration
     }
     else {
-      
+      //if (flag_test_LED) 
+      //else
+        TurnOffVibration();                // turn off vibration
     }
-    stimulation_toggle = !stimulation_toggle;
+    stimulation_toggle = !stimulation_toggle;  
+  }
+  else {
+    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
   }
 }
 
 
 /*
- * Configure timer1 for interrupts
+ * Configure timer1 for interrupts. Timer1 is desirable becuase it is a 16-bit timer,
+ * as opposed to Timer0 or 2, which are 8-bit timers. 
+ * 
+ * The prescaler can be 1, 8, 64, 256, or 1024. It controls how often the timer register 
+ * is incremented. The register increments according to the clock rate divided by the 
+ * prescaler (16 MHz / prescaler)
  */
 void ConfigureTimer1() {
   noInterrupts();  //stop interrupts
@@ -139,9 +172,10 @@ void ConfigureTimer1() {
   TCCR1B = 0;           // same for TCCR1B
   TCNT1  = 0;           // initialize counter value to 0
   
-  // set compare match register
-  // Clock frequency is 16x10^6 Hz
-  OCR1A = (uint16_t)((16/config_pkt.Frequency)*((float)1000000/(float)prescaler)) - 1;
+  // Set compare match register
+  // When the timing register is equal to this value, the Timer1 callback function will
+  // be called. 
+  OCR1A = (uint16_t)(CLOCK_RATE/((float)(config_pkt.Frequency*0.1)*(float)prescaler)) - 1;
   
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
@@ -156,16 +190,29 @@ void ConfigureTimer1() {
 
 
 // ========== setup ==========
+/*
+ * This function is called when the device is powered on or reset.
+ * Initialization of PWM boards, timer, Serial port, and LED takes
+ * place here. 
+ */
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
   while (!Serial);
+  tlc.begin();
   TurnOffVibration();
+
+  config_pkt.Frequency = 30;
+  config_pkt.Amplitude = 10;
   ConfigureTimer1();  
 }
 
 // ========== loop ==========
+/*
+ * This function is called repetedly after setup. It handles incoming
+ * commands on the serial port.
+ */
 void loop() {
   // put your main code here, to run repeatedly:
   
@@ -204,10 +251,5 @@ void loop() {
         //Serial.print("UNKOWN");
         break;
     }
-    /*
-    // say what you got:
-    Serial.print("I received: ");
-    Serial.println(cmd_pkt.Command , DEC);
-    */
   }
 }

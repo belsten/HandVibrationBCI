@@ -24,9 +24,7 @@ struct CommandPacket
 
 // packet that configures relevant parameters of stimulation, is immediately sent after a "Configure" command packet
 struct StimulationConfiguration {
-  uint8_t Amplitude;        // unknown
-  float   Frequency;        // in Hz
+  uint8_t    Amplitude;        // unknown
+  uint16_t   Frequency;        // in 0.1Hz
 };
 #pragma pack()
-
-
