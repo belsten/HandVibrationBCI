@@ -66,13 +66,13 @@ int main (void)
     if (hasWritten) std::cout << "Blink Command Written Successfully" << std::endl;
     else            std::cerr << "Command was not written"            << std::endl;
     
-
+    */
     // send command to configure
     cmd_pkt.Command = Configure;
     hasWritten = arduino->writeSerialPort ((char*)& cmd_pkt, sizeof (CommandPacket));
     if (hasWritten) std::cout << "Configure command Written Successfully" << std::endl;
     else            std::cerr << "Command was not written" << std::endl;
-    */
+    
     // send the configuration
     config_pkt.Amplitude = 100;
     config_pkt.Frequency = 40;
