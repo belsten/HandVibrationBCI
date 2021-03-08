@@ -93,6 +93,7 @@ void TurnOnVibration() {
   // The PWM value in the API is [0-4095]
   // Scale amplitude (which is a uint8_t in [0-100]) to a value in this range
   uint16_t scaled_amplitude = ((4095.0/100.0)*(float)config_pkt.Amplitude);
+  
   for (int ch = 0; ch < N_MOTORS; ch++) {   
     tlc.setPWM(ch, scaled_amplitude);
   }
