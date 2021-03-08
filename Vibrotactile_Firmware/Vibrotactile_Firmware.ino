@@ -9,7 +9,7 @@
 #define LATCH      10
 #define oe         -1  // set to -1 to not use the enable pin (its optional)
 
-#define N_MOTORS 48
+#define N_MOTORS         48
 #define CLOCK_RATE 16000000.0
 
 // ========== Global structures ==========
@@ -91,15 +91,13 @@ void StopStimulation() {
  *  Turn on vibration for all motors
  */
 void TurnOnVibration() {
-  for (int ch = 0; ch < N_MOTORS; ch++) {
-
-    // The PWM value in the API is [0-4095]
-    // Scale amplitude (which is a uint8_t in [0-100]) to a value in this range
-    uint16_t scaled_amplitude = (uint16_t)((float)4095/100)*(float)config_pkt.Amplitude;
-    
+  // The PWM value in the API is [0-4095]
+  // Scale amplitude (which is a uint8_t in [0-100]) to a value in this range
+  uint16_t scaled_amplitude = (uint16_t)((float)4095/100)*(float)config_pkt.Amplitude;
+  for (int ch = 0; ch < N_MOTORS; ch++) {   
     tlc.setPWM(ch, scaled_amplitude);
-    tlc.write(); 
   }
+  tlc.write(); 
 }
 
 
@@ -109,8 +107,8 @@ void TurnOnVibration() {
 void TurnOffVibration() {
   for (int ch = 0; ch < N_MOTORS; ch++) {
     tlc.setPWM(ch, 0);
-    tlc.write(); 
   }
+  tlc.write(); 
 }
 
 /*
@@ -119,8 +117,7 @@ void TurnOffVibration() {
 void ExecuteBlinkLED(int n_blinks=10) {
   int ms_on_and_off = 100;
   
-  for (int i = 0; i < n_blinks; i++)
-  {
+  for (int i = 0; i < n_blinks; i++) {
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
     delay(ms_on_and_off);              // wait 
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off 
@@ -135,15 +132,10 @@ void ExecuteBlinkLED(int n_blinks=10) {
 ISR(TIMER1_COMPA_vect) {  
   if (flag_stimulation) {
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
-    if (stimulation_toggle) {
-      //if (flag_test_LED) 
-        
-      //else                             
+    if (stimulation_toggle) {                 
         TurnOnVibration();                 // turn on vibration
     }
     else {
-      //if (flag_test_LED) 
-      //else
         TurnOffVibration();                // turn off vibration
     }
     stimulation_toggle = !stimulation_toggle;  
@@ -175,7 +167,7 @@ void ConfigureTimer1() {
   // Set compare match register
   // When the timing register is equal to this value, the Timer1 callback function will
   // be called. 
-  OCR1A = (uint16_t)(CLOCK_RATE/((float)(config_pkt.Frequency*0.1)*(float)prescaler)) - 1;
+  OCR1A = (uint16_t)(CLOCK_RATE/((float)(config_pkt.Frequency)*0.1*(float)prescaler)) - 1;
   
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
@@ -203,7 +195,7 @@ void setup() {
   tlc.begin();
   TurnOffVibration();
 
-  config_pkt.Frequency = 30;
+  config_pkt.Frequency = 10;
   config_pkt.Amplitude = 10;
   ConfigureTimer1();  
 }
@@ -225,8 +217,7 @@ void loop() {
       case BlinkLED:
         // ============== BLINK CMD ==============
         flag_test_LED = true;
-        // ExecuteBlinkLED();
-        // Serial.print("BLINK");
+
         break;
      case Configure:
         // ============== CONFIGURE CMD ==============
@@ -238,14 +229,12 @@ void loop() {
      case Start:
         // ============== START CMD ==============
         StartStimulation();
-        // ExecuteBlinkLED(20);
-        //Serial.print("STARTED");
+
         break;
      case Stop:
         // ============== STOP CMD ==============
         StopStimulation();
-        // ExecuteBlinkLED(5);
-        // Serial.print("STOPPED");
+
         break;
      default:
         //Serial.print("UNKOWN");

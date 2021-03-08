@@ -72,15 +72,15 @@ int main (void)
     hasWritten = arduino->writeSerialPort ((char*)& cmd_pkt, sizeof (CommandPacket));
     if (hasWritten) std::cout << "Configure command Written Successfully" << std::endl;
     else            std::cerr << "Command was not written" << std::endl;
-
+    */
     // send the configuration
-    config_pkt.Amplitude = 10;
-    config_pkt.Frequency = 1;
+    config_pkt.Amplitude = 100;
+    config_pkt.Frequency = 40;
 
     hasWritten = arduino->writeSerialPort ((char*)& config_pkt, sizeof (StimulationConfiguration));
     if (hasWritten) std::cout << "Configuration Written Successfully" << std::endl;
     else            std::cerr << "Configuration was not written" << std::endl;
-    */
+    
 
     for (int i = 0; i < 3; i++)
     {
