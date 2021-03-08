@@ -10,6 +10,7 @@ public:
 
   bool Open (const std::string& _COMstring);
   void Close ();
+  bool isConnected () { return m_is_connected; }
 
   bool ConfigureVibration (int _amplitude, float _frequency);
   bool StartVibration ();
