@@ -15,7 +15,7 @@
 // ========== Global structures ==========
 Adafruit_TLC5947                tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
 CommandPacket               cmd_pkt;
-StimulationConfiguration config_pkt;
+ConfigurationPacket      config_pkt;
                                  
 bool flag_test_LED      = false;    // This flag is set high if the BlinkLED command is received
 bool flag_stimulation   = false;    // This flag is set according to the Start and Stop commands
@@ -45,7 +45,7 @@ void GetConfiguration() {
   }
   */
   
-  Serial.readBytes((char*)&config_pkt, sizeof(StimulationConfiguration));
+  Serial.readBytes((char*)&config_pkt, sizeof(ConfigurationPacket));
   if (config_pkt.Amplitude > 100) config_pkt.Amplitude =  100;
   if (config_pkt.Amplitude <   0) config_pkt.Amplitude =    0;
   if (config_pkt.Frequency <=  0) config_pkt.Frequency =    1;

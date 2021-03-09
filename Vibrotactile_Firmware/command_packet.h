@@ -23,7 +23,7 @@ struct CommandPacket
 };
 
 // packet that configures relevant parameters of stimulation, is immediately sent after a "Configure" command packet
-struct StimulationConfiguration {
+struct ConfigurationPacket {
   uint8_t    Amplitude;        // [0-100]
   uint16_t   Frequency;        // in 0.1Hz
 };

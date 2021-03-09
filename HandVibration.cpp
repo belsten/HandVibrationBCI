@@ -41,7 +41,7 @@ bool HandVibration::ConfigureVibration (int _amplitude, float _frequency)
       m_config_pkt.Amplitude = _amplitude;
       m_config_pkt.Frequency = _frequency*10;
 
-      if (mp_arduino->writeSerialPort ((char*)& m_config_pkt, sizeof (StimulationConfiguration)))
+      if (mp_arduino->writeSerialPort ((char*)& m_config_pkt, sizeof (ConfigurationPacket)))
         return true;
     }
   }
