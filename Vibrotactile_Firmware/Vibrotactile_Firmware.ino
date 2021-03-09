@@ -137,7 +137,7 @@ void ConfigureTimer1() {
   // Set compare match register
   // When the timing register is equal to this value, the Timer1 callback function will
   // be called. 
-  OCR1A = (uint16_t)(CLOCK_RATE/((float)(config_pkt.Frequency)*0.1*(float)prescaler)) - 1;
+  OCR1A = (uint16_t)(CLOCK_RATE/((float)(2*config_pkt.Frequency)*0.1*(float)prescaler)) - 1;
   
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);

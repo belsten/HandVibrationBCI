@@ -68,7 +68,7 @@ void
 HandVibrationFilter::AutoConfig (const SignalProperties& Input)
 {
   if ((bool)OptionalParameter ("ActivateHandVibration", false))
-  { 
+  {  
 
   }
 }
