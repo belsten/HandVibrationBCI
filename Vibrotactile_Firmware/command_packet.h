@@ -1,6 +1,9 @@
-#pragma once
+// Author: Alex Belsten (belsten at neurotechcenter.org) 
+//  This file contains common structures that are sent 
+//  between the PC and Arduino. 
 
-#pragma pack(1)
+#pragma once
+#pragma pack(1) // tell compiler not to pad memory
 
 #include "stdint.h"
 
@@ -9,7 +12,6 @@ typedef uint8_t CommandType;
 // Commands that can be sent to the Arduino
 enum Command
 {
-  BlinkLED       = 0,
   Configure      = 1,
   Start          = 2,
   Stop           = 3,
@@ -22,7 +24,7 @@ struct CommandPacket
   CommandType Command;
 };
 
-// packet that configures relevant parameters of stimulation, is immediately sent after a "Configure" command packet
+// packet that configures relevant parameters of vibration, is immediately sent after a "Configure" command packet
 struct ConfigurationPacket {
   uint8_t    Amplitude;        // [0-100]
   uint16_t   Frequency;        // in 0.1Hz
