@@ -1,3 +1,10 @@
+// Author: Alex Belsten (belsten at neurotechcenter.org) 
+//  This code serves as firmware for the Arduino. It monitors the 
+//  Serial port for commands, and executes them when they arrive.
+//  Two Adafruit TLC5947 24 channel PWM drivers that communicate 
+//  over SPI are used. The libraries to interact with this hardware
+//  must be imported in the Arduino IDE. 
+
 #include <Arduino.h>
 #include "Adafruit_TLC5947.h"
 #include "command_packet.h"
@@ -15,14 +22,12 @@
 // ========== Global structures ==========
 Adafruit_TLC5947                tlc = Adafruit_TLC5947(NUM_TLC5974, CLOCK, DATA, LATCH);
 CommandPacket               cmd_pkt;
-StimulationConfiguration config_pkt;
-                                 
-bool flag_test_LED      = false;    // This flag is set high if the BlinkLED command is received
+ConfigurationPacket      config_pkt;
+
 bool flag_stimulation   = false;    // This flag is set according to the Start and Stop commands
 bool stimulation_toggle = true;     // This flag toggles stimulation on and off during stimulation
 
 // ========== Functions ==========
-
 /*
  * Function to get the command type sent from the PC 
  */
@@ -30,26 +35,18 @@ void GetCommand() {
   Serial.readBytes((char*)&cmd_pkt, sizeof(CommandPacket));
 }
 
+
 /*
  * Function to get the stimulation configuration from the PC. This function should
- * always be called after a "BlinkLED" or "Configure" command packet is received. 
+ * always be called after a "Configure" command packet is received. 
  */
-void GetConfiguration() {
-  /*
-  int count = 0;
-  while (Serial.available() == 0) {
-    count++;
-    if (count > 1000) {
-      return;
-    }
-  }
-  */
-  
-  Serial.readBytes((char*)&config_pkt, sizeof(StimulationConfiguration));
+void GetConfiguration() { 
+  Serial.readBytes((char*)&config_pkt, sizeof(ConfigurationPacket));
   if (config_pkt.Amplitude > 100) config_pkt.Amplitude =  100;
   if (config_pkt.Amplitude <   0) config_pkt.Amplitude =    0;
   if (config_pkt.Frequency <=  0) config_pkt.Frequency =    1;
 }
+
 
 /*
  * Handle all necessary procedures to start the stimulation 
@@ -57,6 +54,7 @@ void GetConfiguration() {
 void StartStimulation() {
   flag_stimulation = true;
 }
+
 
 /*
  * Handle all necessary procedures to stop the stimulation 
@@ -67,24 +65,10 @@ void StopStimulation() {
 
   TurnOffVibration();
   interrupts();
-  /*
-  // turn off stimulation
-  if (flag_test_LED) {
-     // turn off LED
-     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off
-     // set LED flag off
-     flag_test_LED  = false; 
-  }
-  else {
-     // set PWM to zero across all channels
-     TurnOffVibration();
-  }
-  */
-
-
   // set the toggle such that in the next trial the stimulation is triggered first
   stimulation_toggle = true;
 }
+
 
 /* 
  *  Turn on vibration for all motors
@@ -111,20 +95,6 @@ void TurnOffVibration() {
   tlc.write(); 
 }
 
-/*
- * Blink the internal LED. Useful function for debugging and demonstrating basic usage. 
-*/
-void ExecuteBlinkLED(int n_blinks=10) {
-  int ms_on_and_off = 100;
-  
-  for (int i = 0; i < n_blinks; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
-    delay(ms_on_and_off);              // wait 
-    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off 
-    delay(ms_on_and_off);              // wait 
-  }
-}
- 
 
 /*
  * Turn on and off the stimulation with each interrupt
@@ -147,7 +117,7 @@ ISR(TIMER1_COMPA_vect) {
 
 
 /*
- * Configure timer1 for interrupts. Timer1 is desirable becuase it is a 16-bit timer,
+ * Configure timer1 for interrupts. Timer1 is desirable because it is a 16-bit timer,
  * as opposed to Timer0 or 2, which are 8-bit timers. 
  * 
  * The prescaler can be 1, 8, 64, 256, or 1024. It controls how often the timer register 
@@ -167,7 +137,7 @@ void ConfigureTimer1() {
   // Set compare match register
   // When the timing register is equal to this value, the Timer1 callback function will
   // be called. 
-  OCR1A = (uint16_t)(CLOCK_RATE/((float)(config_pkt.Frequency)*0.1*(float)prescaler)) - 1;
+  OCR1A = (uint16_t)(CLOCK_RATE/((float)(2*config_pkt.Frequency)*0.1*(float)prescaler)) - 1;
   
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
@@ -200,9 +170,10 @@ void setup() {
   ConfigureTimer1();  
 }
 
+
 // ========== loop ==========
 /*
- * This function is called repetedly after setup. It handles incoming
+ * This function is called repeatedly after setup. It handles incoming
  * commands on the serial port.
  */
 void loop() {
@@ -214,11 +185,6 @@ void loop() {
     GetCommand();
     // decide what to do with the new command
     switch (cmd_pkt.Command) {
-      case BlinkLED:
-        // ============== BLINK CMD ==============
-        flag_test_LED = true;
-
-        break;
      case Configure:
         // ============== CONFIGURE CMD ==============
         // get the stim configuration
@@ -237,7 +203,7 @@ void loop() {
 
         break;
      default:
-        //Serial.print("UNKOWN");
+        
         break;
     }
   }
