@@ -81,6 +81,9 @@ void TurnOnVibration() {
   for (int ch = 0; ch < N_MOTORS; ch++) {   
     tlc.setPWM(ch, scaled_amplitude);
   }
+  digitalWrite(13, HIGH);
+  delay(30);
+  digitalWrite(13, LOW);
   tlc.write(); 
 }
 
