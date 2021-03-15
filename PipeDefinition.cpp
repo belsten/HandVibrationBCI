@@ -41,32 +41,18 @@
 
 
 // Uncomment/add the lines for the filters you need:
-
-//#include "SpatialFilter.h"
-//Filter( SpatialFilter, 2.B );
-
-//#include "CustomIIRFilter.h"
-//Filter( CustomIIRFilter, 2.C1 );
-
-//#include "CustomFIRFilter.h"
-//Filter( CustomFIRFilter, 2.C2 );
-
+#include "ExpressionFilter.h"
+#include "LPFilter.h"
+#include "LinearClassifier.h"
+#include "Normalizer.h"
+#include "SpatialFilter.h"
+#include "SpectralEstimator.h"
 #include "HandVibrationFilter.h"
-Filter( HandVibrationFilter, 2.C3 );
 
-//#include "DiffFilter.h"
-//Filter( DiffFilter, 2.C4 );
-
-//#include "LinearClassifier.h"
-//Filter( LinearClassifier, 2.D );
-
-//#include "LPFilter.h"
-//Filter( LPFilter, 2.D1 );
-
-//#include "ExpressionFilter.h"
-//Filter( ExpressionFilter, 2.D2 );
-
-//#include "Normalizer.h"
-//Filter( Normalizer, 2.E );
-
-
+Filter (HandVibrationFilter, 2.A);
+Filter (SpatialFilter, 2.B);
+Filter (SpectralEstimator, 2.C);
+Filter (LinearClassifier, 2.D);
+Filter (LPFilter, 2.D1);
+Filter (ExpressionFilter, 2.D2);
+Filter (Normalizer, 2.E);

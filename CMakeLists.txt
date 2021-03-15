@@ -3,6 +3,7 @@
 ## Authors: Alex Belsten belsten@neurotechcenter.org
 
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8 AND WIN32 ) 
+  BCI2000_USE( "FFT" )
   # Set the executable name
   SET( EXECUTABLE_NAME HandVibrationFilter)
 

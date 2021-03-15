@@ -28,12 +28,13 @@
 
 using namespace std;
 
-RegisterFilter(HandVibrationFilter, 2.C3);
+RegisterFilter(HandVibrationFilter, 2.A);
 
 
 HandVibrationFilter::HandVibrationFilter () :
   mEnable    (false),
-  mVibrating (false)
+  mVibrating (false),
+  mRandConfig(false)
 {
   mDevice = HandVibration ();
 }
@@ -50,7 +51,9 @@ HandVibrationFilter::Publish()
  BEGIN_PARAMETER_DEFINITIONS
    "Filtering:HandVibrationFilter int ActivateHandVibration= 0 0 0 1 // (boolean)",                       
    "Filtering:HandVibrationFilter string COMPort= COM1 % % % // COM port the Arduino is connected to",
-   "Filtering:HandVibrationFilterc matrix Configurations= "
+   "Filtering:HandVibrationFilter int SelectRandomConfig= 0 0 0 1 // Select a random configuration to apply (boolean)",
+   "Filtering:HandVibrationFilter string RandConfigExpression= TargetCode==ResultCode % % % // ",
+   "Filtering:HandVibrationFilter matrix Configurations= "
      "{ Configuration%20Expression Amplitude Frequency } "        // row labels
      "{ Configuration%201 Configuration%202 Configuration%203 } " // column labels
      "StimulusCode==1  StimulusCode==2  StimulusCode==3 "         // Switch Expression
@@ -60,6 +63,7 @@ HandVibrationFilter::Publish()
  
  BEGIN_STATE_DEFINITIONS
    "HandVibration 1 0 0 0",
+   "RandSelectedConfig 8 0 0 0"
  END_STATE_DEFINITIONS
  
 }
@@ -81,17 +85,29 @@ HandVibrationFilter::Preflight( const SignalProperties& Input, SignalProperties&
   {
     GenericSignal preflightSignals (Input);
     State ("HandVibration");
+    State ("RandSelectedConfig");
     Parameter ("COMPort");
+
+    // verify valid expression if selecting config at random
+    if ((bool)Parameter ("SelectRandomConfig"))
+    {
+      Expression randExpression = Parameter ("RandConfigExpression");
+      randExpression.Compile ();
+      randExpression.Evaluate (&preflightSignals);
+    }
+    
     PreflightCondition (Parameter ("Configurations")->NumRows () == 3);
 
     // for each configuration
     for (int config = 0; config < Parameter ("Configurations")->NumColumns (); config++ )
     {
-      // check that expression is valid
-      Expression switchExpression = Parameter ("Configurations")(0, config);
-      switchExpression.Compile ();
-      switchExpression.Evaluate (&preflightSignals);
-
+      if (!(bool)Parameter ("SelectRandomConfig"))
+      {
+        // check that expression is valid
+        Expression switchExpression = Parameter ("Configurations")(0, config);
+        switchExpression.Compile ();
+        switchExpression.Evaluate (&preflightSignals);
+      }
       int amplitude_idx = 1;
       int frequency_idx = 2;
       // check that amplitude is [0-100]
@@ -126,11 +142,28 @@ HandVibrationFilter::Initialize( const SignalProperties& Input, const SignalProp
 
   // Load all necesary parameters into the ConfigurationList data structure
   mConfigList.clear ();
+
+  mRandConfig = Parameter ("SelectRandomConfig");
+  if (mRandConfig)
+  {
+    // If we're using a random configuration, make a dummy Configuration that is at the front of the list.
+    // We can then check if were selecting configs randomly and then check the evaluation of the first config
+    std::pair<int, float> configuration_parameters;
+    configuration_parameters.first  = 0;
+    configuration_parameters.second = 0;
+
+    Configuration config;
+    config.first  = (Expression)Parameter ("RandConfigExpression");
+    config.second = configuration_parameters;
+    mConfigList.push_back (config);
+  }
+
   // note the locations of specific configuration parameters
   int expression_idx = 0;
   int amplitude_idx  = 1;
   int frequency_idx  = 2;
-  // for each configuration
+
+  // iterate through the configurations, and populate the ConfigList
   for (int c = 0; c < Parameter ("Configurations")->NumColumns (); c++)
   {
     // make pair that describes amplitude and frequency
@@ -168,8 +201,9 @@ HandVibrationFilter::Process( const GenericSignal& Input, GenericSignal& Output 
     if (!mCurrentConfiguration->first.Evaluate(&Input))
     {
       mDevice.StopVibration ();
-      State ("HandVibration") = 0;
-      mVibrating = false;
+      State ("HandVibration")      = 0;
+      State ("RandSelectedConfig") = 0;
+      mVibrating                   = false;
     }
   }
   else
@@ -177,10 +211,9 @@ HandVibrationFilter::Process( const GenericSignal& Input, GenericSignal& Output 
     // not vibrating, check if we should start
     if (this->EvaluateConfigurations (Input))
     {
-      
       mDevice.StartVibration ();
       State ("HandVibration") = 1;
-      mVibrating = true;
+      mVibrating              = true;
     }
   }
 }
@@ -196,6 +229,7 @@ HandVibrationFilter::StopRun()
   {
     mDevice.StopVibration ();
     State ("HandVibration") = 0;
+    State ("RandSelectedConfig") = 0;
     mVibrating = false;
   }
 }
@@ -203,7 +237,30 @@ HandVibrationFilter::StopRun()
 bool
 HandVibrationFilter::EvaluateConfigurations (const GenericSignal& Input)
 {
+
+
   ConfigurationList::iterator itr = mConfigList.begin ();
+
+  if (mRandConfig)
+  {
+    if (itr->first.Evaluate (&Input))
+    {
+      // Bingo!! Found one! 
+      mCurrentConfiguration = itr;
+
+      // select a random configuration to send device
+      int nbins = mConfigList.size () - 1;
+      int selectedbin_idx = rand () % nbins + 1;
+      State ("RandSelectedConfig") = selectedbin_idx;
+      ConfigurationList::iterator selected_itr = mConfigList.begin ();
+      std::advance (selected_itr, selectedbin_idx);
+
+      // send the configuration to the device
+      mDevice.ConfigureVibration (selected_itr->second.first, selected_itr->second.second);
+      return true;
+    }
+    return false;
+  }
   // go through all configuration expressions to see if any evaluate true
   while (itr != mConfigList.end ())
   {
