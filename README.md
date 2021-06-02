@@ -1,7 +1,8 @@
 # Hand vibration device API & BCI2000 Filter
+## Purpose
 
 ## Background
-From the bottom up, the speed of vibrating motors is controlled by PWM, via two Adafruit TLC5947 24 channel PWM drivers. These communicate with an Arduino via SPI protocol. The goal is to be able to control the vibrating motors on a PC, so some communication protocol must exist between the Arduino and PC. This is done via the serial port, where "packets" containing configurations and commands are sent from the PC to the Arduino. Currently, communication is uni-directional. These packets are defined in `/Vibrotactile_Firmware/command_packet.h`.
+This filter is for a vibrotactile device for the hand developed at Washington University School of Medicine. This filter allows BCI2000 to control the amplitude and frequency of the applied vibrations. Since the goal is to control the vibrating motors on a PC, some communication protocol must exist between the Arduino and PC. This is done via the serial port, where "packets" containing configurations and commands are sent from the PC to the Arduino. Currently, communication is uni-directional. These packets are defined in `/Vibrotactile_Firmware/command_packet.h`. The amplitdue of vibrating motors is controlled by PWM, via two Adafruit TLC5947 24 channel PWM drivers. These communicate with an Arduino via SPI protocol. 
 
 ## Controlling the hand
 * Upload `/Vibrotactile_Firmware/Vibrotactile_Firmware.ino` to the Arduino. Note: You must install the Arduino TLC5947 library through Arduino Library Manager.
