@@ -49,6 +49,24 @@ bool HandVibration::ConfigureVibration (int _amplitude, float _frequency)
 }
 
 
+bool HandVibration::UpdateVibrationAmplitude (int _amplitude)
+{
+  if (m_is_connected)
+  {
+    m_cmd_pkt.Command = UpdateAmplitude;
+    if (mp_arduino->writeSerialPort ((char*)& m_cmd_pkt, sizeof (CommandPacket)))
+    {
+      m_config_pkt.Amplitude = _amplitude;
+      m_config_pkt.Frequency = 0;
+
+      if (mp_arduino->writeSerialPort ((char*)& m_config_pkt, sizeof (ConfigurationPacket)))
+        return true;
+    }
+  }
+  return false;
+}
+
+
 bool HandVibration::StartVibration ()
 {
   if (m_is_connected)
@@ -56,6 +74,7 @@ bool HandVibration::StartVibration ()
     m_cmd_pkt.Command = Start;
     return mp_arduino->writeSerialPort ((char*)& m_cmd_pkt, sizeof (CommandPacket));
   }
+  return false;
 }
 
 
@@ -66,4 +85,5 @@ bool HandVibration::StopVibration ()
     m_cmd_pkt.Command = Stop;
     return mp_arduino->writeSerialPort ((char*)& m_cmd_pkt, sizeof (CommandPacket));
   }
+  return false;
 }

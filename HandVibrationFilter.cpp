@@ -28,12 +28,14 @@
 
 using namespace std;
 
-RegisterFilter(HandVibrationFilter, 2.C3);
+RegisterFilter(HandVibrationFilter, 2.F);
 
 
 HandVibrationFilter::HandVibrationFilter () :
   mEnable    (false),
-  mVibrating (false)
+  mVibrating (false),
+  mDoModulateState(false),
+  mModulationState("")
 {
   mDevice = HandVibration ();
 }
@@ -56,6 +58,8 @@ HandVibrationFilter::Publish()
      "StimulusCode==1  StimulusCode==2  StimulusCode==3 "         // Switch Expression
      "10 100 50 "                                                 // Amplitude
      "4 5 6 ",                                                    // Frequency
+   "Filtering:HandVibrationFilter int UseStateModulation= 0 0 0 1 // Use state value to modulate amplitude (boolean)",
+   "Filtering:HandVibrationFilter string ModulationState= StimulusCode % % % "
  END_PARAMETER_DEFINITIONS
  
  BEGIN_STATE_DEFINITIONS
@@ -81,6 +85,10 @@ HandVibrationFilter::Preflight( const SignalProperties& Input, SignalProperties&
   {
     GenericSignal preflightSignals (Input);
     State ("HandVibration");
+    Parameter("ModulationState");
+    if (Parameter("UseStateModulation"))
+      State(Parameter("ModulationState"));
+
     Parameter ("COMPort");
     PreflightCondition (Parameter ("Configurations")->NumRows () == 3);
 
@@ -123,7 +131,8 @@ HandVibrationFilter::Initialize( const SignalProperties& Input, const SignalProp
     bcierr << "HandVibrationFilter error: Unable to connect to device at " << Parameter ("COMPort").ToString ()
            << ". Check that device is plugged in and present in Device Manager" << endl;
   }
-
+  mDoModulateState = Parameter("UseStateModulation");
+  mModulationState = Parameter("ModulationState");
   // Load all necesary parameters into the ConfigurationList data structure
   mConfigList.clear ();
   // note the locations of specific configuration parameters
@@ -171,6 +180,11 @@ HandVibrationFilter::Process( const GenericSignal& Input, GenericSignal& Output 
       State ("HandVibration") = 0;
       mVibrating = false;
     }
+    else if (mDoModulateState)
+    {
+      mDevice.UpdateVibrationAmplitude(State(mModulationState));
+    }
+
   }
   else
   {

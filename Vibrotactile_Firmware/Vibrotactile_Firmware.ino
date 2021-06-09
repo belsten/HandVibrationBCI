@@ -1,3 +1,5 @@
+#include <Adafruit_TLC5947.h>
+
 // Author: Alex Belsten (belsten at neurotechcenter.org) 
 //  This code serves as firmware for the Arduino. It monitors the 
 //  Serial port for commands, and executes them when they arrive.
@@ -40,13 +42,20 @@ void GetCommand() {
  * Function to get the stimulation configuration from the PC. This function should
  * always be called after a "Configure" command packet is received. 
  */
+void GetConfiguration(bool only_amplitude) { 
+  Serial.readBytes((char*)&config_pkt, sizeof(ConfigurationPacket));
+  if (config_pkt.Amplitude > 100) config_pkt.Amplitude =  100;
+  if (config_pkt.Amplitude <   0) config_pkt.Amplitude =    0;
+  if (!only_amplitude)
+    if (config_pkt.Frequency <=  0) config_pkt.Frequency =    1;
+}
+
 void GetConfiguration() { 
   Serial.readBytes((char*)&config_pkt, sizeof(ConfigurationPacket));
   if (config_pkt.Amplitude > 100) config_pkt.Amplitude =  100;
   if (config_pkt.Amplitude <   0) config_pkt.Amplitude =    0;
   if (config_pkt.Frequency <=  0) config_pkt.Frequency =    1;
 }
-
 
 /*
  * Handle all necessary procedures to start the stimulation 
@@ -188,9 +197,14 @@ void loop() {
      case Configure:
         // ============== CONFIGURE CMD ==============
         // get the stim configuration
-        GetConfiguration();
+        GetConfiguration(false);
         // apply the configuration
         ConfigureTimer1();
+        break;
+      case UpdateAmplitude:
+        // ============== UPDATE AMPLITUDE CMD ==============
+        // get the stim configuration
+        GetConfiguration(true); 
         break;
      case Start:
         // ============== START CMD ==============

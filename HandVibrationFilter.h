@@ -51,7 +51,9 @@ class HandVibrationFilter : public GenericFilter
   bool EvaluateConfigurations (const GenericSignal& Input);
 
   bool                        mEnable,
+                              mDoModulateState,
                               mVibrating;
+  std::string                 mModulationState;
   HandVibration               mDevice;
   ConfigurationList           mConfigList;
   ConfigurationList::iterator mCurrentConfiguration;

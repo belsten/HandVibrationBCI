@@ -13,6 +13,7 @@ public:
   bool isConnected () { return m_is_connected; } 
 
   bool ConfigureVibration (int _amplitude, float _frequency);
+  bool UpdateVibrationAmplitude(int _amplitude);
   bool StartVibration ();
   bool StopVibration ();
 
