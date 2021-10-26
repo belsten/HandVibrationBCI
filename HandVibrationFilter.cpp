@@ -25,11 +25,12 @@
 
 #include "HandVibrationFilter.h"
 #include "BCIStream.h"
-
 using namespace std;
 
 RegisterFilter(HandVibrationFilter, 2.C3);
 
+struct ConfigParams;
+std::set<uint8_t> BCI2000ListToSet(ParamRef ch_parm, bool subtract_one);
 
 HandVibrationFilter::HandVibrationFilter () :
   mEnable    (false),
@@ -38,40 +39,45 @@ HandVibrationFilter::HandVibrationFilter () :
   mDevice = HandVibration ();
 }
 
+
 HandVibrationFilter::~HandVibrationFilter ()
 {
   if (mDevice.isConnected ())
     mDevice.Close ();
 }
 
+
 void
 HandVibrationFilter::Publish()
 {
  BEGIN_PARAMETER_DEFINITIONS
-   "Filtering:HandVibrationFilter int ActivateHandVibration= 0 0 0 1 // (boolean)",                       
+   "Filtering:HandVibrationFilter int ActivateHandVibration= 0 0 0 1 // (boolean)",
    "Filtering:HandVibrationFilter string COMPort= COM1 % % % // COM port the Arduino is connected to",
    "Filtering:HandVibrationFilterc matrix Configurations= "
-     "{ Configuration%20Expression Amplitude Frequency } "        // row labels
+     "{ Configuration%20Expression Amplitude Frequency Locations} "  // row labels
      "{ Configuration%201 Configuration%202 Configuration%203 } " // column labels
      "StimulusCode==1  StimulusCode==2  StimulusCode==3 "         // Switch Expression
      "10 100 50 "                                                 // Amplitude
      "4 5 6 ",                                                    // Frequency
+    "{ list 2 1 2 } { list 2 2 3 } { list 2 3 4 }"                // Locations
  END_PARAMETER_DEFINITIONS
- 
+
  BEGIN_STATE_DEFINITIONS
    "HandVibration 1 0 0 0",
  END_STATE_DEFINITIONS
- 
+
 }
+
 
 void
 HandVibrationFilter::AutoConfig (const SignalProperties& Input)
 {
   if ((bool)OptionalParameter ("ActivateHandVibration", false))
-  {  
+  {
 
   }
 }
+
 
 void
 HandVibrationFilter::Preflight( const SignalProperties& Input, SignalProperties& Output ) const
@@ -104,20 +110,23 @@ HandVibrationFilter::Preflight( const SignalProperties& Input, SignalProperties&
       {
         bcierr << "HandVibration Configuration error: Frequency of configuration must be greater than zero" << endl;
       }
+      // check that locations are valid
+      // TODO
     }
   }
 }
+
 
 void
 HandVibrationFilter::Initialize( const SignalProperties& Input, const SignalProperties& Output )
 {
   mEnable = (bool)OptionalParameter ("ActivateHandVibration", false);
-  if (!mEnable) 
+  if (!mEnable)
     return;
 
   if (mDevice.isConnected ())
     mDevice.Close ();
-  
+
   if (!mDevice.Open (Parameter ("COMPort").ToString ()))
   {
     bcierr << "HandVibrationFilter error: Unable to connect to device at " << Parameter ("COMPort").ToString ()
@@ -130,21 +139,25 @@ HandVibrationFilter::Initialize( const SignalProperties& Input, const SignalProp
   int expression_idx = 0;
   int amplitude_idx  = 1;
   int frequency_idx  = 2;
-  // for each configuration
+  int location_idx   = 3;
+
+  // for each configuration add to configlist
   for (int c = 0; c < Parameter ("Configurations")->NumColumns (); c++)
   {
-    // make pair that describes amplitude and frequency
-    std::pair<int, float> configuration_parameters;
-    configuration_parameters.first  = Parameter ("Configurations")(amplitude_idx, c);
-    configuration_parameters.second = Parameter ("Configurations")(frequency_idx, c);
-    
-    // assign an Expression to the pair defined above and add it to the list 
+    // make ConfigParams to store amplitude, frequency, locations
+    ConfigParams configuration_parameters;
+    configuration_parameters.amplitude = Parameter ("Configurations")(amplitude_idx, c);
+    configuration_parameters.frequency = Parameter ("Configurations")(frequency_idx, c);
+    configuration_parameters.locations = BCI2000ListToSet(Parameter ("Configurations")(location_idx, c), false);
+
+    // assign an Expression to the pair defined above and add it to the list
     Configuration config;
     config.first  = (Expression)Parameter ("Configurations")(expression_idx, c);
     config.second = configuration_parameters;
     mConfigList.push_back (config);
   }
 }
+
 
 void
 HandVibrationFilter::StartRun()
@@ -155,13 +168,14 @@ HandVibrationFilter::StartRun()
   // mDevice.StartVibration ();
 }
 
+
 void
 HandVibrationFilter::Process( const GenericSignal& Input, GenericSignal& Output )
 {
-  Output = Input; 
+  Output = Input;
   if (!mEnable)
     return;
-  
+
   if (mVibrating)
   {
     // we are currently vibrating, check if we should stop
@@ -177,13 +191,14 @@ HandVibrationFilter::Process( const GenericSignal& Input, GenericSignal& Output 
     // not vibrating, check if we should start
     if (this->EvaluateConfigurations (Input))
     {
-      
+
       mDevice.StartVibration ();
       State ("HandVibration") = 1;
       mVibrating = true;
     }
   }
 }
+
 
 void
 HandVibrationFilter::StopRun()
@@ -200,6 +215,7 @@ HandVibrationFilter::StopRun()
   }
 }
 
+
 bool
 HandVibrationFilter::EvaluateConfigurations (const GenericSignal& Input)
 {
@@ -209,14 +225,31 @@ HandVibrationFilter::EvaluateConfigurations (const GenericSignal& Input)
   {
     if (itr->first.Evaluate (&Input))
     {
-      // Bingo!! Found one! 
+      // Bingo!! Found one!
       mCurrentConfiguration = itr;
 
       // send the configuration to the device
-      mDevice.ConfigureVibration (mCurrentConfiguration->second.first, mCurrentConfiguration->second.second);
+      mDevice.ConfigureVibration (mCurrentConfiguration->second.amplitude,
+                                  mCurrentConfiguration->second.frequency,
+                                  mCurrentConfiguration->second.locations
+                                 );
       return true;
     }
     itr++;
   }
   return false;
+}
+
+
+std::set<uint8_t> BCI2000ListToSet(ParamRef ch_parm, bool subtract_one)
+{
+	std::set<uint8_t> ch_set = {};
+	for (int ch = 0; ch < ch_parm->NumValues(); ch++)
+	{
+		if(subtract_one)
+			ch_set.insert( (uint8_t)ch_parm(ch) - 1);
+		else
+			ch_set.insert((uint8_t)ch_parm(ch));
+	}
+	return ch_set;
 }

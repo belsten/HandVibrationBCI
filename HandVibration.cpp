@@ -31,16 +31,24 @@ void HandVibration::Close ()
 }
 
 
-bool HandVibration::ConfigureVibration (int _amplitude, float _frequency)
+bool HandVibration::ConfigureVibration (int _amplitude, float _frequency, std::set<uint8_t> locations)
 {
   if (m_is_connected)
   {
     m_cmd_pkt.Command = Configure;
     if (mp_arduino->writeSerialPort ((char*)& m_cmd_pkt, sizeof (CommandPacket)))
     {
+      // write amp/freq
       m_config_pkt.Amplitude = _amplitude;
       m_config_pkt.Frequency = _frequency*10;
-
+      // write locations
+      m_config_pkt.Locations[5] = {0,0,0,0,0}
+      int i = 0;
+      std::set<uint8_t>::iterator it;
+      for (it = locations.begin(); it != locations.end(); ++it) {
+          m_config_pkt.Locations[i]= *it;
+          i+=1;
+      }
       if (mp_arduino->writeSerialPort ((char*)& m_config_pkt, sizeof (ConfigurationPacket)))
         return true;
     }

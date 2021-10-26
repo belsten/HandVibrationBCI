@@ -26,11 +26,18 @@
 #ifndef INCLUDED_HANDVIBRATIONFILTER_H  // makes sure this header is not included more than once
 #define INCLUDED_HANDVIBRATIONFILTER_H
 
+#inlcude <set>
 #include "GenericFilter.h"
 #include "Expression/Expression.h"
 #include "HandVibration.h"
 
-typedef std::pair<Expression, std::pair<int, float>> Configuration;
+struct ConfigParams {
+  int amplitude;
+  float frequency;
+  std::set<uint8_t> locations;
+};
+
+typedef std::pair<Expression, ConfigParams>> Configuration;
 typedef std::list<Configuration> ConfigurationList;
 
 

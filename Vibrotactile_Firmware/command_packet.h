@@ -29,5 +29,6 @@ struct CommandPacket
 struct ConfigurationPacket {
   uint8_t    Amplitude;        // [0-100]
   uint16_t   Frequency;        // in 0.1Hz
+  uint8_t[5] Locations;        // [1-47] locations
 };
 #pragma pack()
