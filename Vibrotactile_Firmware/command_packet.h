@@ -12,10 +12,11 @@ typedef uint8_t CommandType;
 // Commands that can be sent to the Arduino
 enum Command
 {
-  Configure      = 1,
-  Start          = 2,
-  Stop           = 3,
-  NotImplemented = 4
+  Configure       = 1,
+  Start           = 2,
+  Stop            = 3,
+  NotImplemented  = 4,
+  UpdateAmplitude = 5
 };
 
 // A packet that gives the Arduino a command 

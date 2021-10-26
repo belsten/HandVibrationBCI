@@ -51,9 +51,7 @@ class HandVibrationFilter : public GenericFilter
   bool EvaluateConfigurations (const GenericSignal& Input);
 
   bool                        mEnable,
-                              mRandConfig,
                               mVibrating;
-  Expression                  mRandExpression;
   HandVibration               mDevice;
   ConfigurationList           mConfigList;
   ConfigurationList::iterator mCurrentConfiguration;
