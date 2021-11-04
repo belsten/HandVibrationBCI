@@ -1,6 +1,6 @@
-// Author: Alex Belsten (belsten at neurotechcenter.org) 
-//  This file contains common structures that are sent 
-//  between the PC and Arduino. 
+// Author: Alex Belsten (belsten at neurotechcenter.org)
+//  This file contains common structures that are sent
+//  between the PC and Arduino.
 
 #pragma once
 #pragma pack(1) // tell compiler not to pad memory
@@ -19,7 +19,7 @@ enum Command
   UpdateAmplitude = 5
 };
 
-// A packet that gives the Arduino a command 
+// A packet that gives the Arduino a command
 struct CommandPacket
 {
   CommandType Command;
@@ -29,6 +29,6 @@ struct CommandPacket
 struct ConfigurationPacket {
   uint8_t    Amplitude;        // [0-100]
   uint16_t   Frequency;        // in 0.1Hz
-  uint8_t[5] Locations;        // [1-47] locations
+  uint8_t[5] Locations;        // [1-48] locations
 };
 #pragma pack()
